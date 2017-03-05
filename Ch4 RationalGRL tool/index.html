@@ -1,0 +1,744 @@
+<html>
+<head>
+ <title>RationalGRL Editor</title>
+ <script src="js/jquery.min.js" type="text/javascript"></script>
+ <script src="js/lodash.js"></script>
+ <script src="js/backbone.js"></script>
+ <script src="js/easytabs.min.js" type="text/javascript"></script>
+ <script src="js/joint.js"></script>
+ <script type="text/javascript" src="js/jqxcore.js"></script>
+<script type="text/javascript" src="js/jqxmenu.js"></script>
+ <link rel="stylesheet" href="css/rationalgrl.css" />
+ <link rel="stylesheet" href="css/joint.css" />
+ <link rel="stylesheet" href="css/jquery.contextMenu.min.css" />
+ <link rel="stylesheet" href="css/jqx.base.css" type="text/css" />
+ <script type="text/javascript">
+  $(document).ready( function() {
+    $('#tab-container').easytabs();
+  });
+ </script>
+</head>
+<body>
+
+<div id="tab-container" class='tab-container'>
+ <ul class='etabs'>
+   <li class='tab'><a href="#arguments">Arguments</a></li>
+   <li class='tab'><a href="#grl">GRL</a></li>
+ </ul>
+ <div class='panel-container'>
+  <div id="arguments">
+   TODO
+  </div>
+   <div id="grl">
+     <div id="sidebar">
+         Elements<br>
+         <img class="sidebarElement" id="softgoal" src="img/softgoal.png">
+         <img class="sidebarElement" id="goal" src="img/goal.png">
+         <img class="sidebarElement" id="task" src="img/task.png">
+         <img class="sidebarElement" id="resource" src="img/resource.png"><br><br>
+         Links<br>
+         <img class="sidebarElement" id="decomposition" src="img/decomposition.png">
+         <img class="sidebarElement" id="contribution" src="img/contribution.png">
+         <img class="sidebarElement" id="dependency" src="img/dependency.png"><br><br>
+         
+     </div>
+     <div id="paper"></div>
+  </div>
+ </div>
+</div>
+
+<div id='jqxMenu'>
+    <ul>
+        <li id="argueContextMenu">Start argument
+            <ul>
+                <li><a href="#">Scheme #1</a></li>
+                <li><a href="#">...</a></li>
+            </ul>
+        </li>
+        <li id="decompositionContextMenu">Decomposition type
+            <ul>
+                <li id="contextAND">AND</li>
+                <li id="contextOR">OR</li>
+                <li id="contextXOR">XOR</li>
+            </ul>
+        </li>
+        <li id="contributionContextMenu">Set contribution
+            <ul>
+                <li id="contributionMake">make (+++)</li>
+                <li id="contributionSomePositive">some positive (++)</li>
+                <li id="contributionHelp">help (+)</li>
+                <li id="contributionUnknown">unknown (+/-)</li>
+                <li id="contributionHurt">hurt (-)</li>
+                <li id="contributionSomeNegative">some negative (--)</li>
+                <li id="contributionBreak">break (---)</li>
+            </ul>
+        </li>
+    </ul>
+</div>
+
+<script type="text/javascript">
+
+/**
+* Variables.
+*/
+
+var _this = this;
+var viewCurrentlyEditting = null;
+
+var contextMenuId = '#jqxMenu';
+var argueContextMenuId = '#argueContextMenu';
+var decompositionContextMenuId = '#decompositionContextMenu';
+var contributionContextMenuId = '#contributionContextMenu';
+var contextContributionValueClass = 'contextContributionValue';
+
+var graph = new joint.dia.Graph;
+
+var height = 600;
+var width = 900;
+var gridSize = 1;
+
+var paper = new joint.dia.Paper({
+    el: $('#paper'),
+    model: graph,
+    gridSize: gridSize,
+    height: height,
+    width: width,
+    interactive: {
+        vertexAdd: false
+    },
+    linkPinning: false
+});
+
+this.insertOperation = {
+    SOFTGOAL: 0,
+    GOAL: 1,
+    TASK: 2,
+    RESOURCE: 3,
+    ACTOR: 4,
+    CONTRIBUTION: 5,
+    DECOMPOSITION: 6,
+    DEPENDENCY: 7,
+    NOTHING: 8
+}
+
+this.curInsertOperation = insertOperation.NOTHING;
+this.curContextMenuView = null;
+this.curDraggingLine = null;
+this.curConnectingIEView = null;
+
+var contextMenu = $("#jqxMenu").jqxMenu({ width: '150px', height: '140px', autoOpenPopup: false, mode: 'popup'});
+
+
+
+/**
+* JointJS Shapes
+*/
+
+joint.shapes.tm = {};
+
+joint.shapes.tm.Softgoal = joint.shapes.basic.Path.extend({
+    defaults: joint.util.deepSupplement({
+
+        type: 'tm.Softgoal',
+        attrs: {
+            text: { 
+                'ref-y': 0.5, 
+                'y-alignment': 'middle',
+            },
+            path: { 
+                'stroke-width': 2,
+                d: 'M 44.36 0.00 L 55.04 0.00 C 60.22 2.94 66.21 3.57 72.03 4.18 C 92.62 6.24 113.34 6.63 134.02 6.73 C 154.06 6.71 174.13 6.34 194.12 4.65 C 199.92 4.11 205.77 3.61 211.42 2.09 C 211.39 2.85 211.32 4.38 211.29 5.14 C 211.51 4.08 211.79 3.03 211.99 1.96 C 213.42 1.68 214.68 1.03 215.77 0.00 L 229.45 0.00 C 244.10 2.89 257.30 12.09 265.32 24.66 C 272.43 35.64 275.45 49.15 273.75 62.12 C 271.80 78.41 262.19 93.53 248.34 102.32 C 238.28 108.88 226.09 111.82 214.13 111.15 C 214.33 110.47 214.72 109.11 214.91 108.42 C 214.65 109.13 214.12 110.54 213.86 111.24 C 200.44 108.28 186.65 107.71 172.97 107.01 C 145.98 105.95 118.94 105.97 91.97 107.31 C 79.16 108.08 66.18 108.81 53.73 112.00 L 53.23 112.00 C 48.49 110.10 43.21 110.27 38.44 108.41 C 17.64 101.83 1.94 82.17 0.00 60.44 L 0.00 49.33 C 0.99 41.10 3.53 33.03 7.87 25.95 C 15.77 12.76 29.30 3.10 44.36 0.00 Z' 
+                 }
+        },
+        size: { width: 120, height: 50 }
+    }, joint.shapes.basic.Path.prototype.defaults)
+});
+
+joint.shapes.tm.Goal = joint.shapes.basic.Circle.extend({
+    defaults: joint.util.deepSupplement({
+
+        type: 'tm.Goal',
+        attrs: {
+            circle: { 
+                fill: '#ffffff',
+                stroke: '#000000',
+                r: 30,
+                'stroke-width': 2
+            },             
+        },
+        size: { width: 120, height: 50 }
+    }, joint.shapes.basic.Circle.prototype.defaults)
+});
+
+joint.shapes.tm.Task = joint.shapes.basic.Path.extend({
+
+    defaults: joint.util.deepSupplement({
+
+        type: 'tm.Task',
+        attrs: {
+            text: { 
+                'ref-y': 0.5, 
+                'y-alignment': 'middle',
+            },
+            path: { 
+                fill: '#ffffff',
+                stroke: '#000000',
+                'stroke-width': 2,
+                d: 'M 20 0 L 100 0 120 20 100 40 20 40 0 20 Z',
+            }
+        },
+        size: { width: 120, height: 50 }
+    }, joint.shapes.basic.Path.prototype.defaults)
+});
+
+joint.shapes.tm.Resource = joint.shapes.basic.Rect.extend({
+
+    defaults: joint.util.deepSupplement({
+
+        type: 'tm.Resource',
+        attrs: {
+            rect: { 
+                fill: '#ffffff',
+                stroke: '#000000',
+                'stroke-width': 2,
+                transform: "translate(5, 5)",
+            },         
+        },
+        size: { width: 120, height: 50 }
+    }, joint.shapes.basic.Rect.prototype.defaults)
+});
+
+joint.shapes.tm.Actor = joint.shapes.basic.Circle.extend({
+    defaults: joint.util.deepSupplement({
+
+        type: 'tm.Actor',
+        attrs: {
+            circle: { 
+                fill: '#ffffff',
+                stroke: '#000000',
+                r: 30,
+                'stroke-width': 2,
+                'stroke-dasharray': '5,10,5'
+            },
+        },
+        size: { width: 200, height: 200 }
+    }, joint.shapes.basic.Circle.prototype.defaults)
+});
+
+/**
+* JointJS Views
+*/
+
+joint.shapes.tm.ElementView = joint.dia.ElementView.extend({
+
+        template: [
+            '<div class="html-element">',
+            '<div class="label"></div>',
+            '<div class="decomposition"></div>',
+            '<button class="delete">x</button>',
+            '<input type="text" />',
+            
+            '</div>'
+        ].join(''),
+
+        initialize: function() {
+            _.bindAll(this, 'updateBox');
+            joint.dia.ElementView.prototype.initialize.apply(this, arguments);
+
+            this.$box = $(_.template(this.template)());
+            var curView = this;
+            this.$box.find('input').keyup(function(e) {
+                if (e.keyCode == 13) {
+                    curView.updateBox();
+                    curView.toggleEdit();
+                }
+            });
+
+            this.$box.find('.delete').on('click', _.bind(this.model.remove, this.model));
+            // Update the box position whenever the underlying model changes.
+            this.model.on('change', this.updateBox, this);
+            // Remove the box when the model gets removed from the graph.
+            this.model.on('remove', this.removeBox, this);
+
+            this.updateBox();
+        },
+        render: function() {
+            joint.dia.ElementView.prototype.render.apply(this, arguments);
+            this.paper.$el.prepend(this.$box);
+            this.updateBox();
+            return this;
+        },
+        updateBox: function() {
+            // Set the position and dimension of the box so that it covers the JointJS element.
+            var bbox = this.model.getBBox();
+            this.$box.find('.label').text(this.$box.find('input').val());
+            // Example of updating the HTML with a data stored in the cell model.
+            this.$box.css({
+                width: bbox.width,
+                height: bbox.height,
+                left: bbox.x,
+                top: bbox.y,
+                transform: 'rotate(' + (this.model.get('angle') || 0) + 'deg)'
+            });
+        },
+        toggleEdit: function() {
+            var input = this.$box.find('input');
+            var label = this.$box.find('.label');
+            if (input.is(":visible")) {
+                input.hide();
+                label.show();
+                this.model.resize(input.val().length * 10 + 20, 50);
+                this.updateBox();
+                viewCurrentlyEditting = null;
+            } else {
+                input.val(label.text());
+                input.attr('size', label.text().length+2);
+                input.show().select().focus();
+                label.hide();
+                viewCurrentlyEditting = this;
+            }
+            label.text(input.val());
+        },
+        highlight: function() {},
+        removeBox: function(evt) {
+            this.$box.remove();
+        },
+        setLabel: function(name) {
+            this.$box.find('.label').text(name);
+        },
+        setDecomposition: function(type) {
+            this.$box.find('.decomposition').text(type);
+        }
+});
+
+joint.shapes.tm.SoftgoalView = joint.shapes.tm.ElementView;
+joint.shapes.tm.GoalView = joint.shapes.tm.ElementView;
+joint.shapes.tm.TaskView = joint.shapes.tm.ElementView;
+joint.shapes.tm.ResourceView = joint.shapes.tm.ElementView;
+
+/**
+* JointJS Links
+*/
+
+joint.shapes.tm.Contribution = joint.dia.Link.extend({
+    defaults: joint.util.deepSupplement({
+        type: 'tm.Contribution',
+        attrs: {
+            '.marker-vertices': { display : 'none' },
+            '.marker-arrowheads': { display: 'none' },
+            '.connection-wrap': { display: 'none' },
+            '.connection': { 'stroke-width': 2},
+            '.marker-target': { d: 'M 15 0 L 0 8 L 15 15 z' }
+        },
+        labels: [
+        { position: 0.5, attrs: { text: { text: 'help (+)', },  }}
+    ]
+    }, joint.dia.Link.prototype.defaults)
+});
+
+joint.shapes.tm.Decomposition = joint.dia.Link.extend({
+    defaults: joint.util.deepSupplement({
+        type: 'tm.Decomposition',
+        attrs: {
+            '.marker-arrowheads': { display: 'none' },
+            '.connection': { 'stroke-width': 2},
+            '.marker-target': { d: 'M10.833,13.682,10.833,5.5,5.5,5.5,5.5,25.5,10.833,25.5z' },
+            
+        }
+    }, joint.dia.Link.prototype.defaults)
+});
+
+joint.shapes.tm.Dependency = joint.dia.Link.extend({
+    defaults: joint.util.deepSupplement({
+        type: 'tm.Dependency',
+        attrs: {
+            '.marker-arrowheads': { display: 'none' },
+            '.connection': { 'stroke-width': 2},
+            '.marker-target': { d: 'm59.999991,26.418186l-13.499993,0l0,0c-7.455848,0 -13.499998,5.055111 -13.499998,11.290907c0,6.235796 6.04415,11.290907 13.499998,11.290907l13.499993,0l0,-22.581814z' },
+        }
+    }, joint.dia.Link.prototype.defaults)
+});
+
+
+/**
+ * Helper functions
+ */
+
+function isIE(insertOp) {
+    return insertOp == this.insertOperation.SOFTGOAL ||
+            insertOp == this.insertOperation.GOAL ||
+            insertOp == this.insertOperation.TASK || 
+            insertOp == this.insertOperation.RESOURCE ||
+            insertOp == this.insertOperation.ACTOR;
+}
+
+function isLink(insertOp) {
+    return insertOp == this.insertOperation.CONTRIBUTION ||
+            insertOp == this.insertOperation.DECOMPOSITION ||
+            insertOp == this.insertOperation.DEPENDENCY;
+}
+
+function resetState() {
+    $('body').css('cursor', 'default');
+    _this.curInsertOperation = insertOperation.NOTHING;
+    _this.IECurrentlyConnecting = null;
+    _this.curContextMenuView = null;
+    $('.sidebarElement').each(function(i, obj) {
+        $(this).css('border', '0');
+    });
+    if (_this.curDraggingLine != null) {
+        _this.curDraggingLine.remove();
+    }
+}
+
+function linkExists(el1, el2) {
+    if (el1 == null || el2 == null) { return false; }
+    var links = graph.getConnectedLinks(el1.model);
+    
+    var returnValue = false;
+    _.each(links, function(link) {
+        if (link.get('source').id == el2.model.id || link.get('target').id == el2.model.id) {
+            returnValue = true;
+        }
+    });
+    return returnValue;
+}
+
+function isRightClick(event) {
+    var rightclick;
+    if (!event) var event = window.event;
+    if (event.which) rightclick = (event.which == 3);
+    else if (event.button) rightclick = (event.button == 2);
+    return rightclick;
+}
+
+function showContextMenu(e) {
+    var rightClick = isRightClick(event) || $.jqx.mobile.isTouchDevice();
+    if (rightClick) {
+        var scrollTop = $(window).scrollTop();
+        var scrollLeft = $(window).scrollLeft();
+        contextMenu.jqxMenu('open', parseInt(event.clientX) + 5 + scrollLeft, parseInt(event.clientY) + 5 + scrollTop);
+        return false;
+    }
+}
+
+function hasDecomposition(model) {
+    var links = graph.getConnectedLinks(model, { outbound: true });
+    var hasDecomposiiton = false;
+    _.each(links, function(link) {
+        if (link instanceof joint.shapes.tm.Decomposition) {
+            hasDecomposiiton = true;
+        }
+    });
+    return hasDecomposiiton;
+}
+
+/*
+ * Listeners
+ */
+
+$(document).keyup(function(e) {
+     if (e.keyCode == 27) { // escape key maps to keycode `27`
+        resetState();
+        if (viewCurrentlyEditting != null) {
+            viewCurrentlyEditting.toggleEdit();
+        }
+    }
+});
+
+$('.sidebarElement').on('click', function(e) {
+    $('body').css('cursor', 'crosshair');
+    $('.sidebarElement').each(function(i, obj) {
+        $(this).css('border', '0');
+    });
+    $(this).css('border', '1px solid red');
+});
+
+$('#softgoal').on('click', function(e){ _this.curInsertOperation = insertOperation.SOFTGOAL; });
+$('#goal').on('click', function(e){ _this.curInsertOperation = insertOperation.GOAL; });
+$('#task').on('click', function(e){ _this.curInsertOperation = insertOperation.TASK; });
+$('#resource').on('click', function(e){ _this.curInsertOperation = insertOperation.RESOURCE; });
+$('#actor').on('click', function(e){ _this.curInsertOperation = insertOperation.ACTOR; });
+$('#contribution').on('click', function(e){ _this.curInsertOperation = insertOperation.CONTRIBUTION; });
+$('#decomposition').on('click', function(e){ _this.curInsertOperation = insertOperation.DECOMPOSITION; });
+$('#dependency').on('click', function(e){ _this.curInsertOperation = insertOperation.DEPENDENCY; });
+
+graph.on('remove', function(cell, collection, opt) {
+    if (cell instanceof joint.shapes.tm.Decomposition) {
+      _.each(graph.getElements(), function(el) {
+        if (el instanceof joint.shapes.basic.Generic) {
+            if (!_this.hasDecomposition(el)) {
+                paper.findViewByModel(el).setDecomposition('');
+            }
+        }
+     });
+    }
+});
+
+paper.on('blank:pointerup', function(e, x, y) {
+    // ignore clicks outside the paper
+    if (x < 0 || y < 0 || x > width || y > height) {
+        return;
+    }
+    if (viewCurrentlyEditting != null) {
+        viewCurrentlyEditting.toggleEdit();
+    }
+    if (_this.curInsertOperation == _this.insertOperation.NOTHING) {
+        return;
+    }
+    if (isIE(_this.curInsertOperation)) {
+        var name = Object.keys(_this.insertOperation)[_this.curInsertOperation].toLowerCase();
+
+        var newElement;
+
+        switch (_this.curInsertOperation) {
+            case _this.insertOperation.SOFTGOAL:
+                newElement = new joint.shapes.tm.Softgoal;
+                break;
+            case _this.insertOperation.GOAL:
+                newElement = new joint.shapes.tm.Goal;
+                break;
+            case _this.insertOperation.TASK:
+                newElement = new joint.shapes.tm.Task;
+                break;
+            case _this.insertOperation.RESOURCE:
+                newElement = new joint.shapes.tm.Resource;
+                break;
+            case _this.insertOperation.ACTOR:
+                newElement = new joint.shapes.tm.Actor;
+                
+        }
+        newElement.position(Math.max(0,x-50), Math.max(0,y-30));
+        graph.addCells([newElement]);
+        var newElementView = paper.findViewByModel(newElement);
+        newElementView.setLabel(name);
+        newElementView.toggleEdit();
+
+        console.log('added id ' + newElement.id);
+
+        _this.resetState();
+    }
+});
+
+paper.on('cell:pointerdblclick',
+    function(cellView, evt, x, y) {
+        if (viewCurrentlyEditting != null && viewCurrentlyEditting != cellView) {
+            viewCurrentlyEditting.toggleEdit();
+        }
+        cellView.toggleEdit();
+    }
+);
+
+paper.on('cell:mouseover',
+    function(cellView, evt) {
+        if (isLink(_this.curInsertOperation)) {
+            // Add this later in some way
+            // cellView.model.attr({path: {fill: 'red', stroke: 'red' } });
+        }
+
+});
+
+paper.on('cell:pointerdown', function(cellView, evt, x, y) {
+    
+    if (!isLink(_this.curInsertOperation)) {
+        return;
+    }
+
+    // if we are adding a link, don't drag the element but create a draggable line.
+    cellView.options.interactive = false;
+
+    var link;
+    switch (_this.curInsertOperation) {
+        case _this.insertOperation.CONTRIBUTION: 
+            link = new joint.shapes.tm.Contribution;
+            break;
+        case _this.insertOperation.DECOMPOSITION: 
+            link = new joint.shapes.tm.Decomposition;
+            break;
+        case _this.insertOperation.DEPENDENCY:
+            link = new joint.shapes.tm.Dependency;
+
+    }
+    link.set({
+                'source': { id: cellView.model.id },
+                'target': { x: x, y: y }
+            })
+            .addTo(this.model);
+
+    var linkView = link.findView(this);
+
+    _this.curDraggingLine = link;
+    _this.curConnectingIEView = cellView;
+
+    // initiate the linkView arrowhead movement
+    linkView.startArrowheadMove('target');
+
+    $(document).on({
+        'mousemove.example': onDrag,
+        'mouseup.example': onDragEnd
+    }, {
+        // shared data between listeners
+        view: linkView,
+        paper: this
+    });
+
+    function onDrag(evt) {
+        // transform client to paper coordinates
+        var p = evt.data.paper.snapToGrid({
+            x: evt.clientX,
+            y: evt.clientY
+        });
+        // manually execute the linkView mousemove handler
+        evt.data.view.pointermove(evt, p.x, p.y);
+    }
+
+    function onDragEnd(evt) {
+        console.log('mouse up: (' + evt.pageX + ", " + evt.pageY + ")");
+        $(document).off('.example');
+    }
+    
+});
+
+paper.on('cell:pointerup', function(cellView, evt, x, y) {
+    var cell = cellView.model || cellView;
+
+    if (_this.curDraggingLine != null && _this.curConnectingIEView != null) {
+        // we are dragging a link. if there is no target, remove the line and reset.
+        // otherwise: create the link
+        var targetView = paper.findViewsFromPoint({x: x, y: y})[0];
+        var sourceView = _this.curConnectingIEView;
+
+        if (!targetView || sourceView == targetView || targetView.model.isLink() || 
+            linkExists(targetView, sourceView)) {
+            console.log('too bad');
+            _this.resetState();
+        } else {
+            if (_this.curInsertOperation == _this.curInsertOperation.DECOMPOSITION &&
+                !hasDecomposition(sourceView.model)) {
+                console.log('jiooo');
+                    sourceView.setDecomposition('and');
+                }
+            sourceView.options.interactive = true;
+
+        }
+        _this.curDraggingLine.set({
+                'target': { id: targetView.model.id }
+            });
+        _this.curDraggingLine = null; // don't delete it
+
+        _this.resetState();
+    }
+});
+
+paper.on('cell:pointermove', function (cellView, evt, x, y) {
+
+    var bbox = cellView.getBBox();
+    var constrained = false;
+
+    var constrainedX = x;
+
+    if (bbox.x <= 0) { constrainedX = x + gridSize; constrained = true }
+    if (bbox.x + bbox.width >= width) { constrainedX = x - gridSize; constrained = true }
+
+    var constrainedY = y;
+
+    if (bbox.y <= 0) {  constrainedY = y + gridSize; constrained = true }
+    if (bbox.y + bbox.height >= height) { constrainedY = y - gridSize; constrained = true }
+
+    //if you fire the event all the time you get a stack overflow
+    if (constrained) { cellView.pointermove(evt, constrainedX, constrainedY) }
+});
+
+paper.on('cell:contextmenu', function(cellView, e) {
+    var model = cellView.model || cellView;
+    if (model instanceof joint.shapes.basic.Generic) {
+        $(contributionContextMenuId).hide();
+
+        if (_this.hasDecomposition(model)) {
+            $(decompositionContextMenuId).show();
+        } else {
+            $(decompositionContextMenuId).hide();
+        }
+    }
+    else if (model instanceof joint.shapes.tm.Contribution) {
+        $(contributionContextMenuId).show();
+        $(decompositionContextMenuId).hide();
+    } else {
+        $(contributionContextMenuId).hide();
+        $(decompositionContextMenuId).hide();
+    }
+    _this.curContextMenuView = cellView;
+    showContextMenu(e);
+    e.stopPropagation();
+    return false;
+})
+
+// disable the default browser's context menu.
+$(document).on('contextmenu', function (e) {
+    return false;
+});
+
+$('#contextAND').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.basic.Generic) {
+        _this.curContextMenuView.setDecomposition('and');
+    }
+});
+
+$('#contextOR').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.basic.Generic) {
+        _this.curContextMenuView.setDecomposition('or');
+    }
+});
+
+$('#contextXOR').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.basic.Generic) {
+        _this.curContextMenuView.setDecomposition('xor');
+    }
+});
+
+$('#contributionMake').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.tm.Contribution) {
+        _this.curContextMenuView.model.label(0, { attrs: { text: { text: 'make (+++)' } } });
+    }
+});
+
+$('#contributionSomePositive').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.tm.Contribution) {
+        _this.curContextMenuView.model.label(0, { attrs: { text: { text: 'some positive (++)' } } });
+    }
+});
+
+$('#contributionHelp').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.tm.Contribution) {
+        _this.curContextMenuView.model.label(0, { attrs: { text: { text: 'help (+)' } } });
+    }
+});
+
+$('#contributionUnknown').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.tm.Contribution) {
+        _this.curContextMenuView.model.label(0, { attrs: { text: { text: 'unknwon (+/)' } } });
+    }
+});
+
+$('#contributionHurt').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.tm.Contribution) {
+        _this.curContextMenuView.model.label(0, { attrs: { text: { text: 'hurt (-)' } } });
+    }
+});
+
+$('#contributionSomeNegative').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.tm.Contribution) {
+        _this.curContextMenuView.model.label(0, { attrs: { text: { text: 'some negative (--)' } } });
+    }
+});
+
+$('#contributionBreak').on('click', function(e) {
+    if (_this.curContextMenuView != null && _this.curContextMenuView.model instanceof joint.shapes.tm.Contribution) {
+        _this.curContextMenuView.model.label(0, { attrs: { text: { text: 'break (---)' } } });
+    }
+});
+
+    // Text box: <path d="M3.833,4.11v39.142h10.875l-0.004,16.639l16.673-16.639h28.791V4.11H3.833z M16.18,56.332l0.003-14.554 H5.308V5.583H58.69v36.195H30.767L16.18,56.332z">
+  </script>
+</body>
+</html>

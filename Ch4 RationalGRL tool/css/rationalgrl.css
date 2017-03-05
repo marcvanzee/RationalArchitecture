@@ -1,0 +1,241 @@
+body {
+  font-size: 12px; 
+  font-family: "Arial"; 
+}
+
+/* Tabs */
+.etabs { margin: 0; padding: 0; }
+.tab { display: inline-block; zoom:1; *display:inline; background: #eee; border: solid 1px #999; border-bottom: none; -moz-border-radius: 4px 4px 0 0; -webkit-border-radius: 4px 4px 0 0; }
+.tab a { 
+  font-size: 18px; 
+  font-family: "Arial"; 
+  text-decoration: none;
+  color: #2ea900;
+  line-height: 2em; 
+  display: block; 
+  padding: 0 10px; 
+  outline: none; 
+}
+.tab a:hover { text-decoration: underline; }
+.tab.active { background: #fff; padding-top: 6px; position: relative; top: 1px; border-color: #666; }
+.tab a.active { font-weight: bold; }
+.tab-container .panel-container { background: #fff; border: solid #666 1px; padding: 10px; -moz-border-radius: 0 4px 4px 4px; -webkit-border-radius: 0 4px 4px 4px; }
+#grl {
+  margin: auto;
+  padding: 0px;
+}
+
+/* JointJS */
+#paper {
+  margin-left: 115px;
+  height: 600px;
+  border: 1px solid black;
+}
+
+/* Sidebar with elements and relations */
+#sidebar {
+  border: 1px solid black;
+  width: 105px;
+  height: 240px;
+  float: left;
+  font-family: "Arial"; 
+  font-weight: bold;
+  padding: 2px;
+}
+
+.sidebarElement {
+  cursor: pointer;
+}
+
+/* Toolbar of individual elements */
+.element-tools {
+  display: none;
+  cursor: pointer;
+}
+.joint-element:hover .element-tools {
+  display: inline;
+}
+
+/* HTML elements */
+#paper-html-elements {
+    position: relative;
+    border: 1px solid gray;
+    display: inline-block;
+    background: transparent;
+    overflow: hidden;
+}
+#paper-html-elements svg {
+    background: transparent;
+}
+#paper-html-elements svg .link {
+    z-index: 2;
+}
+.html-element {
+    position: absolute;
+    /* Make sure events are propagated to the JointJS element so, e.g. dragging works.*/
+    pointer-events: none;
+    -webkit-user-select: none;
+    vertical-align: middle;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 50px;
+    display: table-cell;
+}
+.html-element input,
+.html-element button {
+    /* Enable interacting with inputs only. */
+    pointer-events: auto;
+}
+.html-element button.delete {
+    color: white;
+    border: none;
+    background-color: #C0392B;
+    border-radius: 20px;
+    width: 15px;
+    height: 15px;
+    line-height: 15px;
+    text-align: middle;
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    padding: 0;
+    margin: 0;
+    font-weight: bold;
+    cursor: pointer;
+}
+.html-element button.delete:hover {
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+}
+
+.html-element input {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    color: #333;
+    padding: 5px;
+    height: 20px;
+    font-size: 14px;
+    border: 1px solid black;
+    display: none;
+}
+.html-element .decomposition {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 5px;
+    height: 15px;
+    vertical-align: top;
+    position: absolute;
+    margin: auto;
+    z-index: 1;
+}
+/* Context menu (right click menu) */
+.container {
+  margin: 0 auto;
+  padding: 0 24px;
+  max-width: 960px;
+}
+
+/* primary header */
+
+.primary-header {
+  padding: 24px 0;
+  text-align: center;
+  border-bottom: solid 2px #cfcfcf;
+}
+
+.primary-header__title {
+  color: #393939;
+  font-size: 36px;
+}
+
+.primary-header__title small {
+  font-size: 18px;
+  color: #898989;
+}
+
+/* content */
+
+.content {
+  padding: 48px 0;
+  border-bottom: solid 2px #cfcfcf;
+}
+
+.content__footer {
+  margin-top: 12px;
+  text-align: center;
+}
+
+/* footer */
+
+.primary-footer {
+  padding: 24px 0;
+  color: #898989;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* tasks */
+
+.tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.task {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: solid 1px #dfdfdf;
+}
+
+.task:last-child {
+  border-bottom: none;
+}
+
+/* context menu */
+
+.context-menu {
+  display: none;
+  position: absolute;
+  z-index: 10;
+  padding: 12px 0;
+  width: 240px;
+  background-color: #fff;
+  border: solid 1px #dfdfdf;
+  box-shadow: 1px 1px 2px #cfcfcf;
+}
+
+.context-menu--active {
+  display: block;
+}
+
+.context-menu__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.context-menu__item {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.context-menu__item:last-child {
+  margin-bottom: 0;
+}
+
+.context-menu__link {
+  display: block;
+  padding: 4px 12px;
+  color: #0066aa;
+  text-decoration: none;
+}
+
+.context-menu__link:hover {
+  color: #fff;
+  background-color: #0066aa;
+}

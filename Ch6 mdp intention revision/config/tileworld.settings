@@ -1,0 +1,16 @@
+worldSize = 20
+holeGestationTimeMin = 10
+holeGestationTimeMax = 15
+holeLifeExpMin = 10
+holeLifeExpMax = 15
+holeScoreMin = 10
+holeScoreMax = 30
+initialNrHoles = 4
+wallSizeMin = 2
+wallSizeMax = 4
+initialNrWalls = 10
+dynamism = 1
+planningTime = 3	
+commitmentDegree = -1
+useReactionStrategy=false
+reactionStrategy=TARGET_DISAPPEARS
